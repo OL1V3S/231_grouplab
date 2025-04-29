@@ -19,10 +19,11 @@
 #include "interrupt_support.h"
 
 #define SERVO_PIN           (22)
-#define PULSE_INCREMENT_uS  (500 * 1000)
-#define SIGNAL_PERIOD_uS    (20000 * 1000)
+#define PULSE_INCREMENT_uS  (500)
+#define SIGNAL_PERIOD_uS    (20000)
 
 static int volatile pulse_width_us;
+volatile cowpi_ioport_t* ioport = (cowpi_ioport_t *) (0xD0000000);
 
 static void handle_timer_interrupt();
 
@@ -49,15 +50,15 @@ char *test_servo(char *buffer) {
 }
 
 void center_servo() {
-    pulse_width_us = 1500 * 1000;
+    pulse_width_us = 1500;
 }
 
 void rotate_full_clockwise() {
-    pulse_width_us = 500 * 1000;
+    pulse_width_us = 500;
 }
 
 void rotate_full_counterclockwise() {
-    pulse_width_us = 2500 * 1000;
+    pulse_width_us = 2500;
 }
 
 static void handle_timer_interrupt() {
@@ -71,13 +72,14 @@ static void handle_timer_interrupt() {
         falling_edge -= PULSE_INCREMENT_uS;
     }
     if (rising_edge == 0) {
-        cowpi_set_output_pins(1 << 22);
+        ioport->output |= (1<<SERVO_PIN);
         rising_edge = SIGNAL_PERIOD_uS;
         falling_edge = pulse_width_us;
     }
     if (falling_edge == 0) {
-        cowpi_set_output_pins(0);
+        ioport->output &= ~(1<<SERVO_PIN);
     }
 
 }
+
 
