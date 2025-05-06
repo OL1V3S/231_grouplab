@@ -231,7 +231,6 @@
                 new_combo2[input_index] = key;
             }
             input_index++;
-            while (cowpi_get_keypress() != 0xFF);
         }
 
     int *combo_ptr = (confirm_phase == 0) ? new_combo1 : new_combo2;
