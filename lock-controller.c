@@ -39,11 +39,9 @@
  static uint8_t combination[3] __attribute__((section (".uninitialized_ram.")));
  static lock_state_t current_state = LOCKED;
  
- // Variables for CHANGING state
- static int new_combo1[COMBO_LENGTH] = {-1, -1, -1};
- static int new_combo2[COMBO_LENGTH] = {-1, -1, -1};
- static int entry_index = 0;
- static bool entering_first = true;
+ static int new_combo1[6] = {-1, -1, -1, -1, -1, -1};
+ static int new_combo2[6] = {-1, -1, -1, -1, -1, -1};
+ static int new_combination[COMBO_LENGTH] = {-1, -1, -1};
  static cowpi_timer_t volatile *timer;
 
  uint32_t get_microseconds(void) {
@@ -84,16 +82,6 @@
      rotate_full_clockwise();
      force_combination_reset();
      timer = (cowpi_timer_t *) (0x40054000);
- }
- 
- void initialize_change_mode() {
-     entry_index = 0;
-     entering_first = true;
-     for (int i = 0; i < COMBO_LENGTH; i++) {
-         new_combo1[i] = -1;
-         new_combo2[i] = -1;
-     }
-     display_string(1, "enter");
  }
  
  void control_lock() {
@@ -219,47 +207,147 @@
      } else if (get_lock_state() == UNLOCKED) {
          if (cowpi_left_switch_is_in_right_position() && cowpi_right_button_is_pressed()) {
              set_lock_state(CHANGING);
-             initialize_change_mode();
-             display_string(1, "CHANGING...");
-         } else if(cowpi_left_button_is_pressed() && cowpi_right_button_is_pressed()){
+             display_string(1, "enter - - -");
+             for (int i = 0; i < 6; i++) {
+                new_combo1[i] = -1;
+                new_combo2[i] = -1;
+             }
+         }
+         if(cowpi_left_button_is_pressed() && cowpi_right_button_is_pressed()){
              set_lock_state(LOCKED);
          }
      } else if (get_lock_state() == CHANGING) {
-         if (cowpi_get_keypress() <= 9) {
-             char key = cowpi_get_keypress();
-             int digit = key - '0';
- 
-             if (entering_first) {
-                 new_combo1[entry_index++] = digit;
-                 if (entry_index == COMBO_LENGTH) {
-                     display_string(1, "re-enter");
-                     entry_index = 0;
-                     entering_first = false;
-                 }
-             } else {
-                 new_combo2[entry_index++] = digit;
-             }
-         }
- 
-         if (cowpi_left_switch_is_in_left_position()) {
-             bool valid = true;
-             for (int i = 0; i < COMBO_LENGTH; i++) {
-                 if (new_combo1[i] != new_combo2[i] || new_combo1[i] > 15 || new_combo1[i] < 0) {
-                     valid = false;
-                     break;
-                 }
-             }
- 
-             if (entry_index < COMBO_LENGTH || !valid) {
-                 display_string(1, "no change");
-             } else {
-                 for (int i = 0; i < COMBO_LENGTH; i++) {
-                     combination[i] = new_combo1[i];
-                 }
-                 display_string(1, "changed");
-             }
-             set_lock_state(UNLOCKED);
-         }
+        static int input_index = 0;
+        static int confirm_phase = 0;
+
+        // combo_phase = ENTERING_FIRST;
+        // int count = 0;
+        char buffer[20];
+        int key = cowpi_get_keypress();
+        if (key != 0xFF && key <= 9 && input_index < 6) {
+            if (confirm_phase == 0) {
+                new_combo1[input_index] = key;
+            } else {
+                new_combo2[input_index] = key;
+            }
+            input_index++;
+            while (cowpi_get_keypress() != 0xFF);
+        }
+
+    int *combo_ptr = (confirm_phase == 0) ? new_combo1 : new_combo2;
+    if (input_index == 0) {
+        sprintf(buffer, "  -  -  ");
+    } else if (input_index <= 2) {
+        sprintf(buffer, "%01d%01d-  -  ", combo_ptr[0], combo_ptr[1]);
+    } else if (input_index <= 4) {
+        sprintf(buffer, "%01d%01d-%01d%01d-  ", combo_ptr[0], combo_ptr[1], combo_ptr[2], combo_ptr[3]);
+    } else if (input_index <= 6) {
+        sprintf(buffer, "%01d%01d-%01d%01d-%01d%01d", combo_ptr[0], combo_ptr[1], combo_ptr[2], combo_ptr[3], combo_ptr[4], combo_ptr[5]);
+    }
+
+    if (input_index >= 6 && confirm_phase == 0) {
+        confirm_phase = 1;
+        input_index = 0;
+        display_string(1, "confirm - - -");
+    }
+
+        // if(combo_phase == ENTERING_FIRST){
+        //     count = 0;
+        //     while(count != 2){
+        //         if(count == 0){
+        //             if(key <= 9){
+        //                 new_combo1[0] = key;
+        //                 key = 10;
+        //                 count++;
+        //             }
+        //         } else {
+        //             if(key <= 9){
+        //                 new_combo1[1] = key;
+        //                 key = 10;
+        //                 count++;
+        //                 combo_phase = ENTERING_SECOND;
+        //             } 
+        //         }
+        //     }
+        // } else if(combo_phase == ENTERING_SECOND){
+        //     count = 0;
+        //     while(count != 2){
+        //         if(count == 0){
+        //             if(key <= 9){
+        //                 new_combo1[2] = key;
+        //                 key = 10;
+        //                 count++;
+        //             }
+        //         } else {
+        //             if(key <= 9){
+        //                 new_combo1[3] = key;
+        //                 key = 10;
+        //                 count++;
+        //                 combo_phase = ENTERING_THIRD;
+        //             } 
+        //         }
+        //     }
+        // } else if(combo_phase == ENTERING_THIRD){
+        //     count = 0;
+        //     while(count != 2){
+        //         if(count == 0){
+        //             if(key <= 9){
+        //                 new_combo1[4] = key;
+        //                 key = 10;
+        //                 count++;
+        //             }
+        //         } else {
+        //             if(key <= 9){
+        //                 new_combo1[5] = key;
+        //                 key = 10;
+        //                 count++;
+        //             } 
+        //         }
+        //     }
+        // }
+        // if(new_combo1[0] == -1){
+        //     sprintf(buffer, "  -  -  ");
+        // } else if (combo_phase == ENTERING_FIRST) {
+        //     if(count == 1){
+        //         sprintf(buffer, "%01d -  -  ", new_combo1[0]);
+        //     } else {
+        //         sprintf(buffer, "%01d%01d-  -  ", new_combo1[0], new_combo1[1]);
+        //     }
+        // } else if (combo_phase == ENTERING_SECOND) {
+        //     if(count == 1){
+        //         sprintf(buffer, "%01d%01d-%01d -  ", new_combo1[0], new_combo1[1], new_combo1[2]);
+        //     } else {
+        //         sprintf(buffer, "%01d%01d-%01d%01d-  ", new_combo1[0], new_combo1[1], new_combo1[2], new_combo1[3]);
+        //     }
+        // } else if (combo_phase == ENTERING_THIRD) {
+        //     if(count == 1){
+        //         sprintf(buffer, "%01d%01d-%01d%01d-%01d ", new_combo1[0], new_combo1[1], new_combo1[2], new_combo1[3], new_combo1[4]);
+        //     } else {
+        //         sprintf(buffer, "%01d%01d-%01d%01d-%01d%01d", new_combo1[0], new_combo1[1], new_combo1[2], new_combo1[3], new_combo1[4], new_combo1[5]);
+        //     }
+        // }
+
+        if(cowpi_left_switch_is_in_left_position()){
+            if(new_combo1[0] == -1 || new_combo1[1] == -1 || new_combo1[2] == -1 || new_combo1[3] == -1 || new_combo1[4] == -1 || new_combo1[5] == -1 || new_combo2[0] == -1 || new_combo2[1] == -1 || new_combo2[2] == -1 || new_combo2[3] == -1 || new_combo2[4] == -1 || new_combo2[5] == -1){
+                sprintf(buffer, "no change");
+            } else if(new_combo1[0] != new_combo2[0] || new_combo1[1] != new_combo2[1] || new_combo1[2] != new_combo2[2] || new_combo1[3] != new_combo2[3] || new_combo1[4] != new_combo2[4] || new_combo1[5] != new_combo2[5]){
+                sprintf(buffer, "no change");
+            } else if(new_combo1[0] == new_combo2[0] && new_combo1[1] == new_combo2[1] && new_combo1[2] == new_combo2[2] && new_combo1[3] == new_combo2[3] && new_combo1[4] == new_combo2[4] && new_combo1[5] == new_combo2[5]){
+                new_combination[0] = (new_combo1[0] * 10) + new_combo1[1];
+                new_combination[1] = (new_combo1[2] * 10) + new_combo1[3];
+                new_combination[2] = (new_combo1[4] * 10) + new_combo1[5];
+                if(new_combination[0] > 15 || new_combination[1] > 15 || new_combination[2] > 15){
+                    sprintf(buffer, "no change"); 
+                } else {
+                    combination[0] = new_combination[0];
+                    combination[1] = new_combination[1];
+                    combination[2] = new_combination[2];
+                    sprintf(buffer, "changed"); 
+                }
+            }
+            set_lock_state(UNLOCKED);
+        }
+        display_string(1, buffer);
      }
  }
  
