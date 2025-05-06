@@ -45,6 +45,10 @@
  static int entry_index = 0;
  static bool entering_first = true;
  static cowpi_timer_t volatile *timer;
+
+ uint32_t get_microseconds(void) {
+    return timer->raw_lower_word;
+ }
  
  uint8_t const *get_combination() {
      return combination;
