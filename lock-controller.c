@@ -253,32 +253,37 @@
             static int input_index = 0;
             static int confirm_phase = 0;
 
-            // combo_phase = ENTERING_FIRST;
-            // int count = 0;
             static uint8_t last_key = 0xFF;
             char buffer[20];
 
             uint8_t key = cowpi_get_keypress();
-            if (key != 0xFF && key != last_key && key <= 9 && input_index < 6) {
+            if (key != 0xFF && key != last_key && key >= '0' && key <= '9' && input_index < 6) {
+                int digit = key - '0';
                 if (confirm_phase == 0) {
-                    new_combo1[input_index] = key;
+                    new_combo1[input_index] = digit;
                 } else {
-                    new_combo2[input_index] = key;
+                    new_combo2[input_index] = digit;
                 }
-            input_index++;
+                input_index++;
             }
             last_key = key;
 
             int *combo_ptr = (confirm_phase == 0) ? new_combo1 : new_combo2;
             if (input_index == 0) {
                 sprintf(buffer, "  -  -  ");
-        } else if (input_index <= 2) {
-            sprintf(buffer, "%01d%01d-  -  ", combo_ptr[0], combo_ptr[1]);
-        } else if (input_index <= 4) {
-            sprintf(buffer, "%01d%01d-%01d%01d-  ", combo_ptr[0], combo_ptr[1], combo_ptr[2], combo_ptr[3]);
-        } else if (input_index <= 6) {
-            sprintf(buffer, "%01d%01d-%01d%01d-%01d%01d", combo_ptr[0], combo_ptr[1], combo_ptr[2], combo_ptr[3], combo_ptr[4], combo_ptr[5]);
-        }
+            } else if (input_index == 1) {
+                sprintf(buffer, "%01d -  -  ", combo_ptr[0]);
+            } else if (input_index == 2) {
+                sprintf(buffer, "%01d%01d-  -  ", combo_ptr[0], combo_ptr[1]);
+            } else if (input_index == 3) {
+                sprintf(buffer, "%01d%01d-%01d -  ", combo_ptr[0], combo_ptr[1], combo_ptr[2]);
+            } else if (input_index == 4) {
+                sprintf(buffer, "%01d%01d-%01d%01d-  ", combo_ptr[0], combo_ptr[1], combo_ptr[2], combo_ptr[3]);
+            } else if (input_index == 5) {
+                sprintf(buffer, "%01d%01d-%01d%01d-%01d ", combo_ptr[0], combo_ptr[1], combo_ptr[2], combo_ptr[3], combo_ptr[4]);
+            } else if (input_index == 6) {
+                sprintf(buffer, "%01d%01d-%01d%01d-%01d%01d", combo_ptr[0], combo_ptr[1], combo_ptr[2], combo_ptr[3], combo_ptr[4], combo_ptr[5]);
+            }
 
         if (input_index >= 6 && confirm_phase == 0) {
             confirm_phase = 1;
