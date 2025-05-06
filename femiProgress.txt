@@ -15,21 +15,17 @@ Section 7 requirements:
 15. done
 16. done
 17. done
+18. practically done
 22. done
+23. done
 
 
 *please please pleeeaseee test my code before you start working on
 yours to make sure it runs (pretty please with a cherry on top)*
 
 Section 7 requirements to-do:
-- Requriment 18
-    - For requirement 18, i got the message to display "bad try 1" 
-      and "bad try 2", but it only displays for a split second. If
-      you could get it to display longer, that would be great. I'm
-      tired lol sorry
 - Requirement 19
     - 19a, it displays alert, but the led's don't blink
     - 19b is done
 - Requirement 20 (optional)
 - Requirement 21
-- Requirement 23 (Read section 7.2)
