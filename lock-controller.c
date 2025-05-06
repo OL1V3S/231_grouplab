@@ -18,7 +18,7 @@
  #define COMBO_LENGTH 3
  
  typedef enum {
-     LOCKED, UNLOCKED, ALARMED, CHANGING
+     LOCKED, UNLOCKED, ALARMED, CHANGING, FAILED
  } lock_state_t;
  
  typedef enum {
@@ -172,23 +172,50 @@
              } else {
                  bad_attempts++;
                  if (bad_attempts >= 3) {
-                     set_lock_state(ALARMED);
                      sprintf(buffer, "alert!");
+                     display_string(1, buffer);
+                     set_lock_state(ALARMED);
                  } else {
                      sprintf(buffer, "bad try %d", bad_attempts);
-                     for (int i = 0; i < COMBO_LENGTH; i++) {
-                         entered_combination[i] = -1;
-                     }
-                     combo_phase = ENTERING_FIRST;
-                     current_value = 0;
-                     first_seen_count = 0;
-                     second_seen_count = 0;
-                     third_seen_count = 0;
-                     user_has_interacted = false;
+                     set_lock_state(FAILED);
                  }
              }
          }
          display_string(1, buffer);
+     } else if(get_lock_state() == FAILED){
+         for (int i = 0; i < 2; i++) {
+             cowpi_illuminate_left_led();
+             cowpi_illuminate_right_led();
+             uint32_t start = get_microseconds();
+             while (get_microseconds() - start < 250000);
+                   
+             cowpi_deluminate_left_led();
+             cowpi_deluminate_right_led();
+             start = get_microseconds();
+             while (get_microseconds() - start < 250000);
+         }
+         for (int i = 0; i < COMBO_LENGTH; i++) {
+             entered_combination[i] = -1;
+         }
+         combo_phase = ENTERING_FIRST;
+         current_value = 0;
+         first_seen_count = 0;
+         second_seen_count = 0;
+         third_seen_count = 0;
+         user_has_interacted = false;
+         set_lock_state(LOCKED);
+     } else if(get_lock_state() == ALARMED){
+         for (int i = 0; i < INT16_MAX; i++) {
+             cowpi_illuminate_left_led();
+             cowpi_illuminate_right_led();
+             uint32_t start = get_microseconds();
+             while (get_microseconds() - start < 250000);
+                    
+             cowpi_deluminate_left_led();
+             cowpi_deluminate_right_led();
+             start = get_microseconds();
+             while (get_microseconds() - start < 250000);
+         }
      } else if (get_lock_state() == UNLOCKED) {
          if (cowpi_left_switch_is_in_right_position() && cowpi_right_button_is_pressed()) {
              set_lock_state(CHANGING);
@@ -198,10 +225,9 @@
              set_lock_state(LOCKED);
          }
      } else if (get_lock_state() == CHANGING) {
-         if (cowpi_get_keypress() != '\0') {
+         if (cowpi_get_keypress() <= 9) {
              char key = cowpi_get_keypress();
              int digit = key - '0';
-             if (digit < 0 || digit > 15) return;
  
              if (entering_first) {
                  new_combo1[entry_index++] = digit;
